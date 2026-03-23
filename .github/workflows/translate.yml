@@ -7,7 +7,7 @@ on:
   workflow_dispatch:          # Bisa dijalankan manual dari tab Actions
     inputs:
       target_lang:
-        description: 'Kode bahasa tujuan (contoh: id, ja, ar, fr)'
+        description: 'Kode bahasa tujuan (contoh: id, ja, ar, fr, ko)'
         required: false
         default: 'id'
 
@@ -27,16 +27,19 @@ jobs:
       - name: Install dependencies
         run: pip install requests
 
-      - name: Run translation script
+      - name: Run translation
         run: |
           TARGET="${{ github.event.inputs.target_lang }}"
           TARGET="${TARGET:-id}"
-          python translate.py --input input/strings.xml --output output/strings_${TARGET}.xml --lang ${TARGET}
+          mkdir -p result
+          python translate.py \
+            --input input/strings.xml \
+            --output result/strings.xml \
+            --lang $TARGET
 
-      - name: Commit hasil terjemahan
-        run: |
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add output/
-          git diff --cached --quiet || git commit -m "🌐 Auto-translate: strings.xml → ${{ github.event.inputs.target_lang || 'id' }}"
-          git push
+      - name: Upload hasil sebagai Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: strings-translated
+          path: result/strings.xml
+          retention-days: 1
